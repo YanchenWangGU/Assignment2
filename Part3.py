@@ -43,7 +43,7 @@ def normalizeData(clusterData):
 
 clusterData = getClusterData(df)
 
-clusterData = clusterData[clusterData['Total_injuries'] <4]
+clusterData = clusterData[clusterData['Total_injuries'] >=4]
 clusterData = clusterData[clusterData['Total_involved'] <5]
 clusterData = clusterData.reset_index(drop=True)
 normalizedDataFrame = normalizeData(clusterData)
@@ -52,7 +52,7 @@ def getKMean(k,normalizedDataFrame):
     kmeans = KMeans(n_clusters=k)
     cluster_labels = kmeans.fit_predict(normalizedDataFrame)
     centroids = kmeans.cluster_centers_
-    pprint(cluster_labels)
+    #pprint(cluster_labels)
     pprint(centroids)
     
 getKMean(3,normalizedDataFrame)
@@ -83,24 +83,20 @@ def getDBSCAN(k,normalizedDataFrame):
             centroid.append(np.mean(subData[j]))
         print(centroid,'\n')
 
-    #kmeans = KMeans(n_clusters=k)
-    #cluster_labels = kmeans.fit_predict(normalizedDataFrame)
-    #centroids = kmeans.cluster_centers_
-    #pprint(cluster_labels)
-    #pprint(centroids)
-#silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
-#print("For n_clusters =", k, "The average silhouette_score on K mean is :", silhouette_avg)
-
-
-normalizedDataFrame = normalizedDataFrame.sample(10000)
-k = 3
-kmeans = KMeans(n_clusters=k)
-cluster_labels = kmeans.fit_predict(normalizedDataFrame)
-centroids = kmeans.cluster_centers_
-pprint(cluster_labels)
-pprint(centroids)
-silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
-print("For n_clusters =", k, "The average silhouette_score on K mean is :", silhouette_avg)
+def getKMeanScore(normalizedDataFrame,k):
+    score = list()
+    # Because of memory issues with the kernel, we can't get the silhouette_score
+    # for the entire data frame with more than 90K instances. We decided to 
+    # sample it multiple times and take the mean
+    for i in range(5):
+        normalizedDataFrame = normalizedDataFrame.sample(5000)
+        kmeans = KMeans(n_clusters=4)
+        cluster_labels = kmeans.fit_predict(normalizedDataFrame)
+        silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
+        score.append(silhouette_avg)
+    print(np.mean(score))
+getKMeanScore(normalizedDataFrame)
+        
 
 pca = PCA(n_components=2,whiten=True).fit(clusterData)
 X_pca = pca.transform(clusterData)
@@ -183,3 +179,29 @@ for k, col in zip(unique_labels, colors):
 
 plt.title('Estimated number of clusters: %d' % n_clusters_)
 plt.show()
+
+
+def IQR(dist):
+    return np.percentile(dist, 95) - np.percentile(dist, 5)
+
+dist =clusterData['Total_involved'].tolist()
+dist = clusterData['Total_injuries'].tolist()
+IQR(dist)
+len(clusterData[clusterData['Total_involved'] > 5])
+len(clusterData[clusterData['Total_injuries'] > 4])
+
+count13 = 0
+count14 = 0
+count15 = 0
+count16 = 0
+for i in range(len(df.index)):
+    if (df['REPORTDATE'][i].split("-")[0] == '2013'):
+        count13 = count13+1
+    if (df['REPORTDATE'][i].split("-")[0] == '2014'):
+        count14 = count14+1
+    if (df['REPORTDATE'][i].split("-")[0] == '2015'):
+        count15 = count15+1
+    if (df['REPORTDATE'][i].split("-")[0] == '2016'):
+        count16 = count16+1
+
+
