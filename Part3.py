@@ -1,38 +1,30 @@
 import numpy as np
-from sklearn.decomposition import PCA
-
+import sys
 import matplotlib.pyplot as plt
 import pandas as pd
-import random
 from sklearn.cluster import KMeans
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
-import pylab as pl
-from sklearn import decomposition
-from pprint import pprint
 from sklearn.metrics import silhouette_samples, silhouette_score
+from mpl_toolkits.mplot3d import Axes3D
 
-df = pd.read_csv('crashP2Original.csv' , sep=',', encoding='latin1')
 
 # Define the data for cluster. We added all major, minior injuries and fatalities 
 # together into a new variable called Total_injuries because most instance in major,
 # minor injuries and fatalities are very small. The variance between instances will 
 # be higher by adding them up and running cluster on the summation would be more 
 # effective since there are bigger variance to cluster into. 
+
+
 def getClusterData(df):
-    Total_injuries = df['MAJORINJURIES_BICYCLIST'] + df['MAJORINJURIES_DRIVER'] + \
-    df['MAJORINJURIES_PEDESTRIAN']+ df['MINORINJURIES_BICYCLIST']+ df['MINORINJURIES_DRIVER']\
-    + df['MINORINJURIES_PEDESTRIAN']+ df['FATAL_BICYCLIST']+ df['FATAL_DRIVER']+ df['FATAL_PEDESTRIAN']
-    
-    Total_involved = df['TOTAL_BICYCLES']+df['TOTAL_PEDESTRIANS'] + df['TOTAL_VEHICLES']
     clusterData = pd.DataFrame()
-    clusterData['Total_injuries'] = Total_injuries
-    clusterData['Total_involved'] = Total_involved
+    clusterData['Total_injuries'] = df['Total_injuries']
+    clusterData['Total_involved'] = df['Total_involved']
     clusterData['SPEEDING_INVOLVED'] = df['SPEEDING_INVOLVED']
     return clusterData
 
-# Normalize data for cluster analysis 
+# Normalize data for cluster analysis using min max scaler
 def normalizeData(clusterData):
     x = clusterData.values 
     x = x.astype(float)
@@ -41,167 +33,202 @@ def normalizeData(clusterData):
     normalizedDataFrame = pd.DataFrame(x_scaled)
     return normalizedDataFrame
 
-clusterData = getClusterData(df)
-
-clusterData = clusterData[clusterData['Total_injuries'] >=4]
-clusterData = clusterData[clusterData['Total_involved'] <5]
-clusterData = clusterData.reset_index(drop=True)
-normalizedDataFrame = normalizeData(clusterData)
-
-def getKMean(k,normalizedDataFrame):
+# We are planning to choose k to 2 becuase most values in Total_injuries are 0
+# and most values in Total_involved are 2 and variations of values in these attributes
+# are not large at all. 
+def getKMean(k,clusterData):
     kmeans = KMeans(n_clusters=k)
+    normalizedDataFrame = normalizeData(clusterData)
     cluster_labels = kmeans.fit_predict(normalizedDataFrame)
-    centroids = kmeans.cluster_centers_
-    #pprint(cluster_labels)
-    pprint(centroids)
-    
-getKMean(3,normalizedDataFrame)
-
-def getWard(k,normalizedDataFrame):
-    # randomly select 10000 instances out of 98K instances because of memory
-    normalizedDataFrame = normalizedDataFrame.sample(10000)
-    ward = AgglomerativeClustering(n_clusters=k, linkage='ward')
-    cluster_labels = ward.fit_predict(normalizedDataFrame)
+    print('The centroids in the original data by using Kmean are:\n')
     for i in np.unique(cluster_labels):
         centroid =list()
-        subData = normalizedDataFrame[cluster_labels == i]
-        for j in normalizedDataFrame.columns:
+        subData = clusterData[cluster_labels == i]
+        # get the centroid in the original data. 
+        for j in clusterData.columns:
+            centroid.append(np.mean(subData[j]))
+        print(centroid,'\n')
+    
+def getWard(k,clusterData):
+    # randomly select 10000 instances out of 98K instances because of memory
+    sampleData = clusterData.sample(10000)
+    normalizedDataFrame = normalizeData(sampleData)
+    ward = AgglomerativeClustering(n_clusters=k, linkage='ward')
+    cluster_labels = ward.fit_predict(normalizedDataFrame)
+    print('The centroids in the original data by using Ward are:\n')
+    for i in np.unique(cluster_labels):
+        centroid =list()
+        subData = sampleData[cluster_labels == i]
+        for j in sampleData.columns:
             centroid.append(np.mean(subData[j]))
         print(centroid,'\n')
         
-getWard(3,normalizedDataFrame)
-
-def getDBSCAN(k,normalizedDataFrame):
-    dbScan = DBSCAN(eps=.3)
+def getDBSCAN(clusterData,radius):
+    sampleData = clusterData.sample(10000)
+    normalizedDataFrame = normalizeData(sampleData)
+    dbScan = DBSCAN(eps=radius)
     cluster_labels = dbScan.fit_predict(normalizedDataFrame)
     n_clusters_ = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
-    pprint(n_clusters_)
+    print('Number of clusters in DBSCAN is',n_clusters_)
+    print('The centroid of DBSCAN in the original data: \n')
     for i in np.unique(cluster_labels):
         centroid =list()
-        subData = normalizedDataFrame[cluster_labels == i]
-        for j in normalizedDataFrame.columns:
+        subData = sampleData[cluster_labels == i]
+        for j in sampleData.columns:
             centroid.append(np.mean(subData[j]))
         print(centroid,'\n')
 
-def getKMeanScore(normalizedDataFrame,k):
+def getKMeanScore(clusterData,k):
     score = list()
     # Because of memory issues with the kernel, we can't get the silhouette_score
     # for the entire data frame with more than 90K instances. We decided to 
     # sample it multiple times and take the mean
     for i in range(5):
-        normalizedDataFrame = normalizedDataFrame.sample(5000)
-        kmeans = KMeans(n_clusters=4)
+        sampleData = clusterData.sample(5000)
+        normalizedDataFrame = normalizeData(sampleData)
+        kmeans = KMeans(n_clusters=k)
         cluster_labels = kmeans.fit_predict(normalizedDataFrame)
         silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
         score.append(silhouette_avg)
-    print(np.mean(score))
-getKMeanScore(normalizedDataFrame)
-        
+    print('silhouette coefficient for Kmean with k =',k, 'is',np.mean(score))
+  
+def getWardScore(clusterData,k):
+    score = list()
+    # Because of memory issues with the kernel, we can't get the silhouette_score
+    # for the entire data frame with more than 90K instances. We decided to 
+    # sample it multiple times and take the mean
+    for i in range(5):
+        sampleData = clusterData.sample(5000)
+        normalizedDataFrame = normalizeData(sampleData)
+        ward = AgglomerativeClustering(n_clusters=k, linkage='ward')
+        cluster_labels = ward.fit_predict(normalizedDataFrame)
+        silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
+        score.append(silhouette_avg)
+    print('silhouette coefficient for Ward with k =',k, 'is',np.mean(score))
 
-pca = PCA(n_components=2,whiten=True).fit(clusterData)
-X_pca = pca.transform(clusterData)
-kmeans = KMeans(n_clusters=k)
-kmeans.fit(X_pca)
-h = .02     # point in the mesh [x_min, x_max]x[y_min, y_max].
+def getDBSCANScore(clusterData,radius):
+    score = list()
+    # Because of memory issues with the kernel, we can't get the silhouette_score
+    # for the entire data frame with more than 90K instances. We decided to 
+    # sample it multiple times and take the mean
+    for i in range(5):
+        dbScan = DBSCAN(eps = radius)
+        sampleData = clusterData.sample(5000)
+        normalizedDataFrame = normalizeData(sampleData)
+        cluster_labels = dbScan.fit_predict(normalizedDataFrame)
+        silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
+        score.append(silhouette_avg)
+    print('silhouette coefficient for DBSCAN with eps =',radius, 'is',np.mean(score))
 
-# Plot the decision boundary. For that, we will assign a color to each
-x_min, x_max = X_pca[:, 0].min() - 1, X_pca[:, 0].max() + 1
-y_min, y_max = X_pca[:, 1].min() - 1, X_pca[:, 1].max() + 1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-Z = kmeans.predict(np.c_[xx.ravel(), yy.ravel()])
-Z = Z.reshape(xx.shape)
-plt.figure(1)
-plt.clf()
-plt.imshow(Z, interpolation='nearest',
-           extent=(xx.min(), xx.max(), yy.min(), yy.max()),
-           cmap=plt.cm.Paired,
-           aspect='auto', origin='lower')
+def plotKmean(k,clusterData):
+    sampleData = clusterData.sample(10000)
+    normalizedDataFrame = normalizeData(sampleData)
+    x = normalizedDataFrame.loc[:,0]
+    y = normalizedDataFrame.loc[:,1]
+    z = normalizedDataFrame.loc[:,2]
+    kmeans = KMeans(n_clusters=k)
+    cluster_labels = kmeans.fit_predict(normalizedDataFrame)
+    center = kmeans.cluster_centers_
+    fignum = 1
+    fig = plt.figure(fignum, figsize=(4, 3))
+    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+    ax.scatter(x,y,z,c=cluster_labels)
+    for i,j,k in center:
+        ax.scatter(i,j,k,c='red',marker='+')
+    ax.set_title('Plot of K mean with k = 2 and centroids are in red')
+    ax.set_xlabel('Total_injuries')
+    ax.set_ylabel('Total_involved')
+    ax.set_zlabel('SPEEDING_INVOLVED')
 
-plt.plot(X_pca[:, 0], X_pca[:, 1], 'k.', markersize=2)
-# Plot the centroids as a white X
-centroids = kmeans.cluster_centers_
-plt.scatter(centroids[:, 0], centroids[:, 1],
-            marker='x', s=169, linewidths=3,
-            color='w', zorder=10)
-plt.title('K-means clustering on the digits dataset (PCA-reduced data)\n'
-          'Centroids are marked with white cross')
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.xticks(())
-plt.yticks(())
-plt.show()
+def plotWard(k,clusterData):
+    sampleData = clusterData.sample(10000)
+    normalizedDataFrame = normalizeData(sampleData)
+    x = normalizedDataFrame.loc[:,0]
+    y = normalizedDataFrame.loc[:,1]
+    z = normalizedDataFrame.loc[:,2]
+    ward = AgglomerativeClustering(n_clusters=k)
+    cluster_labels = ward.fit_predict(normalizedDataFrame)
+    center = []
+    for i in np.unique(cluster_labels):
+        centroid =list()
+        subData = normalizedDataFrame[cluster_labels == i]
+        # get the centroid in the original data. 
+        for j in normalizedDataFrame.columns:
+            centroid.append(np.mean(subData[j]))
+        center.append(np.asarray(centroid))
+    fig = plt.figure(figsize=(5, 5))
+    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+    ax.scatter(x,y,z,c=cluster_labels)
+    for i,j,k in center:
+        ax.scatter(i,j,k,c='red',marker='+')
+    ax.set_title('Plot of Ward with number of clusters = 2 and centroids are in red')
+    ax.set_xlabel('Total_injuries')
+    ax.set_ylabel('Total_involved')
+    ax.set_zlabel('SPEEDING_INVOLVED')
 
-
-ward = AgglomerativeClustering(n_clusters=k, linkage='ward')
-cluster_labels = ward.fit_predict(normalizedDataFrame)
-pprint(cluster_labels)
-silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
-print("For n_clusters =", k, "The average silhouette_score on K mean is :", silhouette_avg)
-
-
-
-dbScan = DBSCAN(eps=.05)
-cluster_labels = dbScan.fit_predict(normalizedDataFrame)
-pprint(cluster_labels)
-silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
-print("For n_clusters =", k, "The average silhouette_score on K mean is :", silhouette_avg)
-
-
-clusterData = getClusterData(df)
-
-
-reduced_data = PCA(n_components=2).fit_transform(clusterData)
-
-db = DBSCAN().fit(reduced_data)
-core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-core_samples_mask[db.core_sample_indices_] = True
-labels = db.labels_
-n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-
-
-unique_labels = set(labels)
-colors = [plt.cm.Spectral(each)
-          for each in np.linspace(0, 1, len(unique_labels))]
-for k, col in zip(unique_labels, colors):
-    if k == -1:
-        # Black used for noise.
-        col = [0, 0, 0, 1]
-
-    class_member_mask = (labels == k)
-
-    xy = reduced_data[class_member_mask & core_samples_mask]
-    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-             markeredgecolor='k', markersize=14)
-
-    xy = reduced_data[class_member_mask & ~core_samples_mask]
-    plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-             markeredgecolor='k', markersize=6)
-
-plt.title('Estimated number of clusters: %d' % n_clusters_)
-plt.show()
-
-
-def IQR(dist):
-    return np.percentile(dist, 95) - np.percentile(dist, 5)
-
-dist =clusterData['Total_involved'].tolist()
-dist = clusterData['Total_injuries'].tolist()
-IQR(dist)
-len(clusterData[clusterData['Total_involved'] > 5])
-len(clusterData[clusterData['Total_injuries'] > 4])
-
-count13 = 0
-count14 = 0
-count15 = 0
-count16 = 0
-for i in range(len(df.index)):
-    if (df['REPORTDATE'][i].split("-")[0] == '2013'):
-        count13 = count13+1
-    if (df['REPORTDATE'][i].split("-")[0] == '2014'):
-        count14 = count14+1
-    if (df['REPORTDATE'][i].split("-")[0] == '2015'):
-        count15 = count15+1
-    if (df['REPORTDATE'][i].split("-")[0] == '2016'):
-        count16 = count16+1
+    
+def plotDBSCAN(radius,clusterData):
+    sampleData = clusterData.sample(10000)
+    normalizedDataFrame = normalizeData(sampleData)
+    x = normalizedDataFrame.loc[:,0]
+    y = normalizedDataFrame.loc[:,1]
+    z = normalizedDataFrame.loc[:,2]
+    dbScan = DBSCAN(eps = radius)
+    cluster_labels = dbScan.fit_predict(normalizedDataFrame)
+    center = []
+    for i in np.unique(cluster_labels):
+        centroid =list()
+        subData = normalizedDataFrame[cluster_labels == i]
+        # get the centroid in the original data. 
+        for j in normalizedDataFrame.columns:
+            centroid.append(np.mean(subData[j]))
+        center.append(np.asarray(centroid))
+    fig = plt.figure(figsize=(5, 5))
+    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+    ax.scatter(x,y,z,c=cluster_labels)
+    for i,j,k in center:
+        ax.scatter(i,j,k,c='red',marker='+')
+    ax.set_title('Plot of DBSCAN with number of clusters = 2 and centroids are in red')
+    ax.set_xlabel('Total_injuries')
+    ax.set_ylabel('Total_involved')
+    ax.set_zlabel('SPEEDING_INVOLVED')
 
 
+def main(argv):
+    df = pd.read_csv('crash_afterPart1.csv' , sep=',', encoding='latin1')
+    clusterData = getClusterData(df)
+    getKMean(2,clusterData)
+    # The centroids in the original data are:
+    # [0.484192037470726, 2.0995316159250588, 1.0] 
+    # [0.2806376657456967, 2.0026704276152274, 0.0] 
+    getWard(2,clusterData)
+    # The centroids in the original data are:
+    # [0.2927028128821851, 1.9990827558092132, 0.0] 
+    # [0.46808510638297873, 2.0319148936170213, 1.0]
+    getDBSCAN(clusterData,.25)
+    # We use EPS = 0.25 because when EPS = .25, the silhouette_score is highest
+    # [6.0, 4.0, 0.0] 
+    # [0.29011841567986935, 1.9972437729685586, 0.0]     
+    # [0.4187192118226601, 2.2167487684729066, 1.0]  
+    # Compare with different k value 
+    getKMeanScore(clusterData,2)
+    # silhouette coefficient for Kmean with k= 2 is 0.82874215613
+    getKMeanScore(clusterData,3)
+    # silhouette coefficient for Kmean with k= 2 0.772950271498
+    getWardScore(clusterData,2)    
+    # silhouette coefficient for Ward with k = 2 is 0.82497653045
+    getWardScore(clusterData,3)
+    # silhouette coefficient for Ward with k = 3 is 0.780263673914
+    getDBSCANScore(clusterData,.35)
+    # silhouette coefficient for DBSCAN with eps = 0.35 is 0.84040247202
+    getDBSCANScore(clusterData,.25)
+    # silhouette coefficient for DBSCAN with eps = 0.25 is 0.850147523982
+    
+    plotKmean(2,clusterData)
+    
+    plotWard(2,clusterData)  
+
+    plotDBSCAN(.25,clusterData)  
+    
+if __name__ == "__main__":
+    main(sys.argv)
