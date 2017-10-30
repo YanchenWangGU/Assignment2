@@ -37,9 +37,7 @@ def normalizeData(clusterData):
     normalizedDataFrame = pd.DataFrame(x_scaled)
     return normalizedDataFrame
 
-# We are planning to choose k to 2 becuase most values in Total_injuries are 0
-# and most values in Total_involved are 2 and variations of values in these attributes
-# are not very large. 
+# perform k mean on the cluster data for a given k
 # Param: the data to cluster and k, the number of clusters 
 def getKMean(k,clusterData):
     kmeans = KMeans(n_clusters=k)
@@ -153,6 +151,11 @@ def getDBSCANScore(clusterData,radius):
         dbScan = DBSCAN(eps = radius)
         normalizedDataFrame = normalizeData(sampleData)
         cluster_labels = dbScan.fit_predict(normalizedDataFrame)
+        # Just in case number of cluster is 1 that there is no way to get the 
+        # silhouette score with only one cluster 
+        if len(cluster_labels) == 1:
+            print('Number of cluster is 1, score is not available')
+            return
         # get silhouette score from cluster labels in DBSCAN 
         silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
         score.append(silhouette_avg)
@@ -264,6 +267,9 @@ def plotDBSCAN(radius,clusterData):
 def main(argv):
     df = pd.read_csv('crash_afterPart1.csv' , sep=',', encoding='latin1')
     clusterData = getClusterDataCar(df)
+    # We are planning to choose k to 2 becuase most values in Total_injuries are 0
+    # and most values in Total_involved are 2 and variations of values in these attributes
+    # are not very large. 
     getKMean(2,clusterData)
     # The centroids in the original data by using Kmean are:
     # [0.484192037470726, 2.0995316159250588, 1.0] 
