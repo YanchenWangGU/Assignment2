@@ -154,7 +154,7 @@ def getDBSCANScore(clusterData,radius):
         # Just in case number of cluster is 1 that there is no way to get the 
         # silhouette score with only one cluster 
         if len(cluster_labels) == 1:
-            print('Number of cluster is 1, score is not available')
+            print('When eps =',radius,'Number of cluster is 1 and score is not available')
             return
         # get silhouette score from cluster labels in DBSCAN 
         silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)

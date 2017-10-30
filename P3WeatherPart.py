@@ -140,7 +140,7 @@ def getDBSCANScore(clusterData,radius):
     # Base case that if number of cluster is 1, there is no silhouette score
     # with only one cluster
     if len(set(cluster_labels)) == 1:
-        print('Number of cluster is 1, score is not available')
+        print('When eps =',radius,'Number of cluster is 1 and score is not available')
         return
     silhouette_avg = silhouette_score(normalizedDataFrame, cluster_labels)
     print('silhouette coefficient for DBSCAN with eps =',radius, 'is',silhouette_avg)
@@ -244,7 +244,7 @@ def main(argv):
     # [0.08262419871794878, 53.79086538461539, 34.58052884615385] 
     # [0.1725887652358239, 84.15182829888712, 64.70906200317965] 
     
-    getDBSCAN(clusterData,.2)
+    getDBSCAN(clusterData,.25)
     # Number of clusters in DBSCAN is 2
     # The centroid of DBSCAN in the original data: 
     # [2.705, 69.75, 58.375] 
