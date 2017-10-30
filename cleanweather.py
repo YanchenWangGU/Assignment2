@@ -61,7 +61,7 @@ def main(argv):
     df.loc[df['Date']=='2015-01-12T00:00:00','SNOW']=0
     df.loc[df['Date']=='2015-01-23T00:00:00','SNOW']=0
     df.loc[df['Date']=='2016-01-07T00:00:00','SNOW']=0
-    df.loc[df['Date']=='2016-01-25T00:00:00','SNOW']=17
+    df.loc[df['Date']=='2016-01-25T00:00:00','SNOW']=0
     df.loc[df['Date']=='2014-01-18T00:00:00','SNOW']=0
     df.loc[df['Date']=='2015-01-23T00:00:00','SNOW']=0
     df.loc[df['Date']=='2014-05-11T00:00:00','SNOW']=0
