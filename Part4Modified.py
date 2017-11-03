@@ -3,82 +3,81 @@ import pandas as pd
 import sys
 import numpy as np
 
+# This function will merge the car accident and weather data set by dates. 
+# So that it will create a column called 'AccidentCount', which contains total 
+# number of accidents for that day. It will also merge temperature, snowfall and
+# rainfall by date. In particular, we took mean of three stations' oberservations
+# for that day to give maximum, minimum temperature, rainfall and snowfall of
+# that day. 
+# Param: car accident and weather data frames 
+# Output: the merged data set by date
 def formNewDataframe(myData1, myData2):
     #split the data attribute to date and time
     myData1['Date'], myData1['Time'] = zip(*myData1['FROMDATE'].apply(lambda x: x.split('T')))
     myData2['Date'], myData2['Time'] = zip(*myData2['Date'].apply(lambda x: x.split('T')))
     
-    #dateArray is the array that contains a list of non-repeating dates. 
+    # dateArray is the array that contains a list of non-repeating dates. 
     dateArray = myData2.Date.unique()
     
-    #Create several empty lists for the following merge process. 
+    # Create several empty lists for the following merge process. 
     meanRain = []
     meanSnow = []
     accidentCount = []
     
-    #Use a for loop to collect data from either dataset. 
-    #Then form a new dataframe that each row represent the data in a specific date. 
-    #There will not be two rows representing the same date
+    # Use a for loop to collect data from either dataset. 
+    # Then form a new dataframe that each row represent the data in a specific date. 
+    # There will not be two rows representing the same date
     for i in range(len(dateArray)):
-        
-        #append the mean of the rainfall in three different location on a specific date. 
+        # append the mean of the rainfall in three different location on a specific date. 
         meanRain.append(np.mean(myData2[myData2.Date == dateArray[i]]['PRCP']))
-        #append the mean of the snow in three different location on a specific date.
+        # append the mean of the snow in three different location on a specific date.
         meanSnow.append(np.mean(myData2[myData2.Date == dateArray[i]]['SNOW']))
-        #append the number of rows of accident on a specifc date. 
+        # append the number of rows of accident on a specifc date. 
         accidentCount.append(myData1[myData1.Date == dateArray[i]].shape[0])
 
-    #Create an empty dataframe
+    # Create an empty dataframe
     Data = pd.DataFrame()
     
-    #Add the merged attrbutes into the new dataframe. 
+    # Add the merged attrbutes into the new dataframe. 
     Data['Date'] = dateArray                 #Date is the attribute showing date
     Data['MeanRain'] = meanRain              #MeanRain is the mean of the rain fall in three different location
     Data['AccidentCount'] = accidentCount    #AccidentCount is the number of accident in the specific day
     Data['MeanSnow'] = meanSnow              #MeanSnow is the mean of the snow fall in three different location
-    #Calculate number of injuries per accident on a specific date 
-    #and add a new attribute called 'injPERacci' into the dataframe
+    # Calculate number of injuries per accident on a specific date 
+    # and add a new attribute called 'injPERacci' into the dataframe
     
-    #There are some obvious outliers in the Accident count. 
+    # There are some obvious outliers in the Accident count. 
     Data = Data[(Data['AccidentCount'] > 10) & (Data['AccidentCount'] < 200)]
     
-    #return the new merged dataframe. 
+    # return the new merged dataframe. 
     return(Data)
 
-#Divide some of the attributes into bins and add new bin attributes into the dataframe. 
-#The input variable is a dataframe. 
-#This function returns the dataframe with bin attributes. 
+# Bin accident count into binary bins called "accidentBin" and bin rain and 
+# snow to a new bin called "niceWeather"
+# The input variable is a dataframe. 
+# This function returns the dataframe with bin attributes. 
 def addBins(myData):
-    
-    #Turn the 'meanMaxT' column into a list in order to get the percentiles. 
-    #Bin the mean maximum temperature by 33 and 66 percentiles. 
-    #'meanMaxT' is divided into three bins labeled 1,2,3 respectively. 
-    #add the bin attribute 'maxTbin' into the dataframe. 
-
-    
-
-    #bin the snow and rainfall into binary bins (snow or not, rain or not). 
-    #The standard of 'no rain' or 'no snow' is the data is smaller or equal to 0.1. 'rain' or 'snow' otherwise. 
-    #add the bin attributes 'rainBin' and 'snowBin' into the dataframe. 
+    # The standard of 'no rain' or 'no snow' is the data is smaller or equal 
+    # to 0.1. 'rain' or 'snow' otherwise. 
+    # add the bin attributes 'rainBin' and 'snowBin' into the dataframe. 
     myData.loc[myData['MeanRain'] <= 0.1, 'rainBin'] = 0
     myData.loc[myData['MeanRain'] > 0.1, 'rainBin'] = 1
     myData.loc[myData['MeanSnow'] <= 0.1, 'snowBin'] = 0
     myData.loc[myData['MeanSnow'] > 0.1, 'snowBin'] = 1
     
-    #Combine the 'rainBin' and 'snowBin' to add an attribute showing the weather is nice or not
-    #The standard of 'nice weather' is no rain or snow on the sepcific date
-    #add the bin attribute 'niceWeather' into the dataframe. 
+    # Combine the 'rainBin' and 'snowBin' to add an attribute showing the weather is nice or not
+    # The standard of 'nice weather' is no rain or snow on the sepcific date
+    # add the bin attribute 'niceWeather' into the dataframe. 
     myData.loc[(myData['rainBin']+ myData['snowBin']) == 0, 'niceWeather'] = 0
     myData.loc[(myData['rainBin']+ myData['snowBin']) > 0, 'niceWeather'] = 1
     
-    
-    #bin the accident count per accident into two bins (below median and above median)
-    #add the bin attribute 'accidentBin' into the dataframe.
+    # bin the accident count per accident into two bins (equi-depth)
+    # add the bin attribute 'accidentBin' into the dataframe.
     columnlist4 = myData['AccidentCount'].tolist()
     myData.loc[myData['AccidentCount']<=np.percentile(columnlist4, 50), 'accidentBin']=0
     myData.loc[myData['AccidentCount']>np.percentile(columnlist4, 50), 'accidentBin']=1
     
-    #return the resultant dataframe. 
+    # return the resultant dataframe. 
     return(myData)
 
 
