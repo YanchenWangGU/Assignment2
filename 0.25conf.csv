@@ -1,8 +1,0 @@
-From,To,conf_level
-,accidentBin0.0,0.5085910652920962
-,accidentBin1.0,0.49140893470790376
-,niceWeather0.0,0.7525773195876289
-accidentBin0.0,niceWeather0.0,0.7432432432432433
-niceWeather0.0,accidentBin0.0,0.502283105022831
-accidentBin1.0,niceWeather0.0,0.7622377622377623
-niceWeather0.0,accidentBin1.0,0.497716894977169

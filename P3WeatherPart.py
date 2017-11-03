@@ -247,8 +247,9 @@ def main(argv):
     getDBSCAN(clusterData,.25)
     # Number of clusters in DBSCAN is 2
     # The centroid of DBSCAN in the original data: 
-    # [2.705, 69.75, 58.375] 
-    # [0.11426332646991523, 66.85415236787921, 47.521962937542895] 
+    # [2.716666666666667, 61.5, 50.5] 
+
+    # [0.11779872058487537, 66.86943111720356, 47.54763536668951] 
     
     getKMeanScore(clusterData,2)
     # silhouette coefficient for Kmean with k = 2 is 0.562689103907
