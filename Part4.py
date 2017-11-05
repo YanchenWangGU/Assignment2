@@ -142,6 +142,7 @@ def formAssociationSet(results, supp_set):
 
 
 def main(argv):
+    # Open two data sets 
     with open('crash_afterPart1.csv') as file1: 
         myData1 = pd.read_csv(file1)
     file1.closed
@@ -170,8 +171,6 @@ def main(argv):
     print('The Support set and Association set for min_supp = .05\n')
     print(supportSet)
     print(associationSet)
-    supportSet.to_csv('0.05Supp.csv',sep = ',', index = False)
-    associationSet.to_csv('0.05conf.csv',sep = ',', index = False)
 
     # min_support = .1
     supp_set = getIndicesofMinSupp(results,.1)
@@ -180,8 +179,6 @@ def main(argv):
     print('The Support set and Association set for min_supp = .1\n')
     print(supportSet)
     print(associationSet)
-    supportSet.to_csv('0.1Supp.csv',sep = ',', index = False)
-    associationSet.to_csv('0.1conf.csv',sep = ',', index = False)
     
     # min_support = .25
     supp_set = getIndicesofMinSupp(results,.25)
@@ -190,8 +187,6 @@ def main(argv):
     print('The Support set and Association set for min_supp = .25\n')
     print(supportSet)
     print(associationSet)
-    supportSet.to_csv('0.25Supp.csv',sep = ',', index = False)
-    associationSet.to_csv('0.25conf.csv',sep = ',', index = False)
 
 if __name__ == "__main__":
     main(sys.argv)
